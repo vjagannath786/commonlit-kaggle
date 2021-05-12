@@ -73,6 +73,27 @@ class LitModel(nn.Module):
             return outputs, loss
 
 
+class LitRoberta(nn.Module):
+    def __init__(self):
+        super(LitRoberta, self).__init__()
+        self.roberta = transformers.RobertaModel.from_pretrained(config.ROBERTA_MODEL, return_dict=False)
+        self.drop = nn.Dropout(0.3)
+        self.l1 = nn.Linear(768,1)
+    
+    def forward(self,ids, mask, token_type_ids, targets=None):
+        x = self.roberta(ids, attention_mask = mask)
+        hidden_state = x[0]
+        x = hidden_state[:, 0]
+        x = self.l1(x)
+        x = self.drop(x)
+        outputs = x
+
+
+        if targets is None:
+            return outputs
+        else:
+            loss = loss_fn(outputs, targets.unsqueeze(1))
+            return outputs, loss
 
 
 

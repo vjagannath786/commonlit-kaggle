@@ -5,13 +5,14 @@ import torch.optim as optim
 import pandas as pd
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
+from transformers.modeling_roberta import RobertaModel
 
 
 
 import config
 import engine
 from dataset import LitDataset
-from model import LitModel
+from model import LitModel, LitRoberta
 from pytorrchtools import EarlyStopping
 
 
@@ -43,7 +44,8 @@ def run_training(fold):
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
 
-    model = LitModel()
+    #model = LitModel()
+    model = LitRoberta()
     model.to(config.DEVICE)
 
     parameter_optimizer = list(model.named_parameters())
@@ -71,7 +73,7 @@ def run_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, verbose=True)
+    early_stopping = EarlyStopping(patience=5, path=f'checkpoint_{fold}.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
@@ -98,7 +100,7 @@ def run_training(fold):
             print("Early stopping")
             break
 
-    model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
+    #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
 
 
 
