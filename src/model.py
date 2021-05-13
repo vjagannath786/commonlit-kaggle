@@ -74,7 +74,7 @@ class LitModel(nn.Module):
 
 
 class LitRoberta(nn.Module):
-    def __init__(self,  dropout, config):
+    def __init__(self,config,dropout):
         super(LitRoberta, self).__init__()
         self.roberta = transformers.RobertaModel.from_pretrained('roberta-base',  config=config)
         

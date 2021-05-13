@@ -153,8 +153,8 @@ def run_roberta_training(fold, params, save_model=True):
 
     valid_fold = df.query(f"kfold == {fold + 3}")
 
-    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=params['MAX_LENGTH'])
-    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth=params['MAX_LENGTH'])
+    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=params['MAX_LEN'])
+    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth=params['MAX_LEN'])
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = params['BATCH_SIZE'], num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
@@ -165,7 +165,7 @@ def run_roberta_training(fold, params, save_model=True):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(params['DROPOUT'],config= model_config )
+    model = LitRoberta(config= model_config, dropout= params['DROPOUT'])
     model.to(config.DEVICE)
 
     parameter_optimizer = list(model.named_parameters())
@@ -196,9 +196,10 @@ def run_roberta_training(fold, params, save_model=True):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=save_model)
+    early_stopping = EarlyStopping(patience=1, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=save_model)
 
-    best_loss = 1000
+    best_score = 10000
+    #counter = 0 
     for epoch in range(params['EPOCHS']):
         print(optimizer.param_groups[0]['lr'])
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
@@ -221,18 +222,24 @@ def run_roberta_training(fold, params, save_model=True):
         '''
 
         early_stopping(valid_loss, model)
+
+        
+            
+        if valid_loss < best_score:
+            best_score = valid_loss
+        else:
+            print("valid loss has not decreased")
+        
         
         if early_stopping.early_stop:
             print("Early stopping")
             break
-        else:
-            best_loss = valid_loss
 
 
 
         #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
 
-    return best_loss
+    return best_score
 
 
 
@@ -244,13 +251,13 @@ def obective(trail):
         "LR": trail.suggest_loguniform('LR',1e-6,1e-3),
         "EPOCHS" : trail.suggest_int('EPOCHS',10,50),
         "MAX_LEN" :trail.suggest_uniform('MAX_LEN',200,256),
-        "DROPOUT" : trail.suggest_uninform('DROPOUT',0.1,0.7),
+        "DROPOUT" : trail.suggest_uniform('DROPOUT',0.1,0.7),
         "BATCH_SIZE" : trail.suggest_int('BATCH_SIZE',8,16)
 
 
     }
 
-    loss = run_training(0,params, save_model = False)
+    loss = run_roberta_training(0,params, save_model = False)
     
 
 
@@ -272,14 +279,14 @@ if __name__ == "__main__":
     #run_roberta_training(3)
 
     study = optuna.create_study(direction="minimize")
-    study.optimize(obective, n_trail = 15)
+    study.optimize(obective, n_trials = 15)
 
     print('best trail')
     trail_ = study.best_trail
     print(trail_.values)
     print(trail_.params)
 
-    run_training(0, trail_.params, save_model= True)
+    run_roberta_training(0, trail_.params, save_model= True)
 
 
     #print(bert_pred)
