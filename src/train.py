@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
 from transformers import AdamW
-from transformers import get_cosine_with_hard_restarts_schedule_with_warmup
-from transformers import RobertaModel
+from transformers import get_linear_schedule_with_warmup
+
 
 
 
@@ -69,7 +69,7 @@ def run_training(fold):
 
     num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * config.EPOCHS)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
@@ -154,7 +154,7 @@ def run_roberta_training(fold):
 
 
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
