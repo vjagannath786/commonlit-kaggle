@@ -3,10 +3,10 @@ import transformers
 DEVICE ="cuda"
 TRAIN_BATCH_SIZE = 16
 VALID_BATCH_SIZE = 8
-NUM_WORKERS = 1
-EPOCHS = 20
-MAX_LEN = 220
-LR = 3e-5
+NUM_WORKERS = 8
+EPOCHS = 10
+MAX_LEN = 250
+LR = 1e-5
 BERT_MODEL = 'bert-base-uncased'
 ROBERTA_MODEL = 'roberta-base'
 TRAIN_FILE = "../../input/commonlit-folds/train_folds.csv"

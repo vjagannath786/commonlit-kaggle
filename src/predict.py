@@ -83,7 +83,8 @@ def run_predict(fold):
 
 if __name__ == "__main__":
     a = run_predict_roberta(0)
-    b = run_predict(0)
+    b = run_predict_roberta(1)
+    #b = run_predict(0)
 
-    print(f'avg loss from both models {(a +b) / 2}')
+    #print(f'avg loss from both models {(a +b) / 2}')
     

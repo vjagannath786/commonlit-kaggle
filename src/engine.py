@@ -13,8 +13,9 @@ def train_fn(model, data_loader, optimizer, scheduler):
             data[key] = value.to(config.DEVICE)
         
         
-
+        
         _, loss = model(**data)
+        
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()

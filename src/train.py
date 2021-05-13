@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
 from transformers import AdamW
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_cosine_with_hard_restarts_schedule_with_warmup
 from transformers import RobertaModel
 
 
@@ -31,11 +31,12 @@ def run_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
 
     fold1 = df.query(f"kfold == {fold}")
+    fold2 = df.query(f"kfold == {fold+1}")
     
 
-    train_fold = fold1
+    train_fold = fold1.append(fold2)
 
-    valid_fold = df.query(f"kfold == {fold+1}")
+    valid_fold = df.query(f"kfold == {fold+2}")
 
     trainset = LitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = LitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
@@ -68,7 +69,7 @@ def run_training(fold):
 
     num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * config.EPOCHS)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
@@ -112,11 +113,12 @@ def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
 
     fold1 = df.query(f"kfold == {fold}")
+    fold2 = df.query(f"kfold == {fold+1}")
     
 
-    train_fold = fold1
+    train_fold = fold1.append(fold2)
 
-    valid_fold = df.query(f"kfold == {fold+1}")
+    valid_fold = df.query(f"kfold == {fold+2}")
 
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
@@ -148,8 +150,11 @@ def run_roberta_training(fold):
     ]
 
     num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * config.EPOCHS)
+    #num_train_steps = 3
+
+
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
@@ -198,6 +203,7 @@ def run_roberta_training(fold):
 
 if __name__ == "__main__":
     run_roberta_training(0)
+    run_roberta_training(1)
 
     
 

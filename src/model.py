@@ -77,20 +77,21 @@ class LitRoberta(nn.Module):
     def __init__(self):
         super(LitRoberta, self).__init__()
         self.roberta = transformers.RobertaModel.from_pretrained(config.ROBERTA_MODEL, return_dict=False)
-        self.drop = nn.Dropout(0.2)
-        self.l1 = nn.Linear(768,128)
-        self.l2 = nn.Linear(128,1)
+        self.drop = nn.Dropout(0.1)
+        self.l1 = nn.Linear(768,1)
+        #self.l2 = nn.Linear(128,1)
+        torch.nn.init.normal_(self.l1.weight, std =0.02)
     
     def forward(self,ids, mask, targets=None):
         x = self.roberta(ids, attention_mask = mask)
         hidden_state = x[0]
         x = hidden_state[:, 0]
-        x = F.relu(x)
+        #x = F.relu(x)
         x = self.drop(x)
         x = self.l1(x)
-        x = F.relu(x)
-        x = self.drop(x)
-        x = self.l2(x)
+        #x = F.relu(x)
+        #x = self.drop(x)
+        #x = self.l2(x)
         outputs = x
 
 
