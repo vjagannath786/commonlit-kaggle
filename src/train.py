@@ -6,6 +6,8 @@ import pandas as pd
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
 
+from sklearn.ensemble import RandomForestRegressor
+
 
 
 
@@ -24,6 +26,17 @@ def loss_fn(outputs, targets):
     #loss = 
     #print(loss.view(-1))
     return torch.sqrt(nn.MSELoss()(outputs, targets))
+
+
+bert_pred = None
+roberta_pred = None
+
+
+def load_classifier(bert_outputs, roberta_outputs,valid_targtes):
+    pass
+
+
+
 
 
 
@@ -100,8 +113,13 @@ def run_training(fold):
         if early_stopping.early_stop:
             print("Early stopping")
             break
+        else:
+            bert_pred = valid_preds
 
-    #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
+
+        #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
+
+        #return valid_preds
 
 
 
@@ -185,9 +203,14 @@ def run_roberta_training(fold):
         if early_stopping.early_stop:
             print("Early stopping")
             break
+        else:
+            roberta_pred = valid_preds
 
-    #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
 
+
+        #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
+
+        #return valid_preds
 
 
 
@@ -202,8 +225,13 @@ def run_roberta_training(fold):
 
 
 if __name__ == "__main__":
+    run_training(0)
     run_roberta_training(0)
-    run_roberta_training(1)
+
+    print(bert_pred)
+    print(roberta_pred)
+
+    
 
     
 
