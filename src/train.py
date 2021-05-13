@@ -42,14 +42,20 @@ def load_classifier(bert_outputs, roberta_outputs,valid_targtes):
 
 def run_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
+    df = df.query(f"kfold != 4")
+    '''
 
     fold1 = df.query(f"kfold == {fold}")
     fold2 = df.query(f"kfold == {fold+1}")
-    
+    fold3 = df.query(f"kfold == {fold+2}")
+    '''
 
-    train_fold = fold1.append(fold2)
+    #train_fold = fold1.append(fold2)
+    train_fold = df[df.kfold != fold]
+    print(train_fold.shape)
 
-    valid_fold = df.query(f"kfold == {fold+2}")
+    valid_fold = df.query(f"kfold == {fold}")
+    print(valid_fold.shape)
 
     trainset = LitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = LitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
@@ -87,7 +93,7 @@ def run_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_{fold}.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
@@ -132,11 +138,14 @@ def run_roberta_training(fold):
 
     fold1 = df.query(f"kfold == {fold}")
     fold2 = df.query(f"kfold == {fold+1}")
+    fold3 = df.query(f"kfold == {fold+2}")
+
     
 
     train_fold = fold1.append(fold2)
+    train_fold = train_fold.append(fold3)
 
-    valid_fold = df.query(f"kfold == {fold+2}")
+    valid_fold = df.query(f"kfold == {fold+3}")
 
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)

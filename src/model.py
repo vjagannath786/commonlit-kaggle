@@ -24,17 +24,17 @@ class LitModel(nn.Module):
     def __init__(self):
         super(LitModel, self).__init__()
         self.model = transformers.BertModel.from_pretrained(config.BERT_MODEL, return_dict= False)
-        self.drop = nn.Dropout(0.2)
+        self.drop = nn.Dropout(0.1)
         
         
-        self.linear1 = nn.Linear(768,128)
-        
-
-        self.linear2 = nn.Linear(128,64)
+        self.linear1 = nn.Linear(768,1)
         
 
+        #self.linear2 = nn.Linear(128,64)
         
-        self.linear3 = nn.Linear(64,1)
+
+        
+        #self.linear3 = nn.Linear(64,1)
         
 
     
@@ -49,18 +49,18 @@ class LitModel(nn.Module):
         
 
         _, x = self.model(ids, attention_mask=mask, token_type_ids= token_type_ids)        
-        x = F.leaky_relu(x)
+        #x = F.leaky_relu(x)
         x = self.drop(x)        
         x = self.linear1(x)
         
-        x = F.leaky_relu(x)
-        x = self.drop(x)
+        #x = F.leaky_relu(x)
+        #x = self.drop(x)
         
-        x= self.linear2(x)
-        x = F.leaky_relu(x)
-        x = self.drop(x)
+        #x= self.linear2(x)
+        #x = F.leaky_relu(x)
+        #x = self.drop(x)
         
-        x = self.linear3(x)
+        #x = self.linear3(x)
         outputs = x
         
         
