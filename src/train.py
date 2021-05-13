@@ -5,7 +5,7 @@ import torch.optim as optim
 import pandas as pd
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
-
+from transformers import RobertaConfig
 from sklearn.ensemble import RandomForestRegressor
 
 
@@ -135,17 +135,23 @@ def run_training(fold):
 
 def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
+    #df = df.query(f"kfold != 4")
 
     fold1 = df.query(f"kfold == {fold}")
     fold2 = df.query(f"kfold == {fold+1}")
     fold3 = df.query(f"kfold == {fold+2}")
+
+    #shuffle data to prevent overfitting
+    #df = df.sample(frac=1).reset_index(drop=True)
 
     
 
     train_fold = fold1.append(fold2)
     train_fold = train_fold.append(fold3)
 
-    valid_fold = df.query(f"kfold == {fold+3}")
+    #train_fold = df[df.kfold != fold]
+
+    valid_fold = df.query(f"kfold == {fold + 3}")
 
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
@@ -153,9 +159,13 @@ def run_roberta_training(fold):
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
-
+    model_config = RobertaConfig.from_pretrained('roberta-base')
+    model_config.output_hidden_states = True
+    #model_config.max_position_embeddings=514
+    #model_config.vocab_size = 50265
+    #model_config.type_vocab_size = 1
     
-    model = LitRoberta()
+    model = LitRoberta(config= model_config)
     model.to(config.DEVICE)
 
     parameter_optimizer = list(model.named_parameters())
@@ -190,8 +200,11 @@ def run_roberta_training(fold):
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
+        print(optimizer.param_groups[0]['lr'])
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
+
+        
 
         
 
@@ -234,11 +247,16 @@ def run_roberta_training(fold):
 
 
 if __name__ == "__main__":
-    run_training(0)
+    #run_training(0)
     run_roberta_training(0)
+    #run_roberta_training(1)
+    #run_roberta_training(2)
+    #run_roberta_training(3)
 
-    print(bert_pred)
-    print(roberta_pred)
+
+
+    #print(bert_pred)
+    #print(roberta_pred)
 
     
 

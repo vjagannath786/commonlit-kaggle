@@ -4,6 +4,7 @@ import torch.optim as optim
 import pandas as pd
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
+from transformers import RobertaConfig
 
 
 
@@ -26,7 +27,13 @@ def run_predict_roberta(fold):
 
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
-    model = LitRoberta()
+    model_config = RobertaConfig.from_pretrained('roberta-base')
+    model_config.output_hidden_states = True
+    model_config.max_position_embeddings=514
+    model_config.vocab_size = 50265
+    model_config.type_vocab_size = 1
+    
+    model = LitRoberta(config= model_config)
     model.load_state_dict(torch.load(f'../../working/checkpoint_roberta_{fold}.pt'))
 
     model.to(config.DEVICE)
@@ -84,7 +91,10 @@ def run_predict(fold):
 if __name__ == "__main__":
     a = run_predict_roberta(0)
     #b = run_predict_roberta(1)
-    b = run_predict(0)
+    #c = run_predict_roberta(2)
+    #d = run_predict_roberta(3)
 
-    print(f'avg loss from both models {(a +b) / 2}')
+    #b = run_predict(0)
+
+    #print(f'avg loss from both models {(a +b +c + d) / 4}')
     
