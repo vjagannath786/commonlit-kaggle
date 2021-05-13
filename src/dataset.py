@@ -49,12 +49,12 @@ class LitDataset:
 
 
 class RobertaLitDataset:
-    def __init__(self, review, targets=None, is_test= False):
+    def __init__(self, review, targets=None, is_test= False, max_lnth=256):
         self.review = review
         self.targets = targets
         self.tokenizer = config.ROBERTA_TOKENIZER
         
-        self.max_len = config.MAX_LEN
+        self.max_len = max_lnth
         self.is_test = is_test
 
     def __len__(self):
