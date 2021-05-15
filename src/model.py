@@ -7,7 +7,7 @@ from  dataset import LitDataset
 import numpy as np
 import pandas as pd
 
-from model import LitRobertaSequence
+
 
 
 
@@ -116,11 +116,11 @@ class LitRoberta(nn.Module):
 
 
 class LitRobertasequence(nn.Module):
-    def __init__(self,config,dropout):
+    def __init__(self,config):
         super(LitRobertasequence, self).__init__()
         self.roberta = transformers.RobertaModel.from_pretrained('roberta-base',  config=config)
         
-        self.drop1 = nn.Dropout(dropout)
+        self.drop1 = nn.Dropout(0.1)
         self.l1 = nn.Linear(768*1,1)
         #self.batchnorm1 = nn.BatchNorm1d(128)
         self.drop2 = nn.Dropout(0.2)

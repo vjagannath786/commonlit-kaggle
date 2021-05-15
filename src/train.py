@@ -351,7 +351,7 @@ if __name__ == "__main__":
     #run_roberta_training(0)
     #run_roberta_training(1)
     #run_roberta_training(2)
-    run_roberta_training(3)
+    run_roberta_sequence_training(3)
 
 
 
