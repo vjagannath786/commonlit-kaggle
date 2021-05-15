@@ -33,7 +33,7 @@ def run_predict_roberta(fold):
     model_config.vocab_size = 50265
     model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config)
+    model = LitRoberta(config= model_config, dropout = 0.1165987668268081)
     model.load_state_dict(torch.load(f'../../working/checkpoint_roberta_{fold}.pt'))
 
     model.to(config.DEVICE)
@@ -90,11 +90,11 @@ def run_predict(fold):
 
 if __name__ == "__main__":
     a = run_predict_roberta(0)
-    #b = run_predict_roberta(1)
-    #c = run_predict_roberta(2)
-    #d = run_predict_roberta(3)
+    b = run_predict_roberta(1)
+    c = run_predict_roberta(2)
+    d = run_predict_roberta(3)
 
     #b = run_predict(0)
 
-    #print(f'avg loss from both models {(a +b +c + d) / 4}')
+    print(f'avg loss from both models {(a +b +c + d) / 4}')
     

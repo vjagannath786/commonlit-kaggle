@@ -199,7 +199,7 @@ def run_roberta_training(fold, params, save_model=True):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=1, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=save_model)
+    early_stopping = EarlyStopping(patience=3, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=save_model)
 
     best_score = 10000
     #counter = 0 
@@ -285,19 +285,28 @@ if __name__ == "__main__":
     #run_roberta_training(2)
     #run_roberta_training(3)
 
-    study = optuna.create_study(direction="minimize")
-    study.optimize(obective, n_trials = 15)
+    #study = optuna.create_study(direction="minimize")
+    #study.optimize(obective, n_trials = 10)
 
-    print('best trail')
-    trail_ = study.best_trial
-    print(trail_.values)
-    print(trail_.params)
+    #print('best trail')
+    #trail_ = study.best_trial
+    #print(trail_.values)
+    #print(trail_.params)
 
-    best_params = pd.DataFrame.from_dict(trail_)
+    #best_params = pd.DataFrame.from_dict(trail_)
+
+    params = {
+        "LR": 1.3445302262976302e-05,
+        "EPOCHS" : 50,        
+        "DROPOUT" : 0.1165987668268081,
+        "BATCH_SIZE" : 9
+
+
+    }
 
     scores = 0
     for i in range(4):
-        scr = run_roberta_training(i, trail_.params, save_model= True)
+        scr = run_roberta_training(i, params, save_model= True)
         scores += scr
     
 
