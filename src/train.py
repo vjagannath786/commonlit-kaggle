@@ -3,11 +3,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
+import numpy as np
 from transformers import AdamW
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_cosine_with_hard_restarts_schedule_with_warmup
 from transformers import RobertaConfig
 from sklearn.ensemble import RandomForestRegressor
-
+import random
 
 
 
@@ -16,6 +17,12 @@ import engine
 from dataset import LitDataset, RobertaLitDataset
 from model import LitModel, LitRoberta, LitRobertasequence
 from pytorrchtools import EarlyStopping
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 
@@ -135,29 +142,31 @@ def run_training(fold):
 
 def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
-    #df = df.query(f"kfold != 4")
+    df = df.query(f"kfold != 4")
 
-    fold1 = df.query(f"kfold == {fold}")
-    fold2 = df.query(f"kfold == {fold+1}")
-    fold3 = df.query(f"kfold == {fold+2}")
+    #fold1 = df.query(f"kfold == {fold}")
+    #fold2 = df.query(f"kfold == {fold+1}")
+    #fold3 = df.query(f"kfold == {fold+2}")
 
     #shuffle data to prevent overfitting
     #df = df.sample(frac=1).reset_index(drop=True)
 
     
 
-    train_fold = fold1.append(fold2)
-    train_fold = train_fold.append(fold3)
+    #train_fold = fold1.append(fold2)
+    #train_fold = train_fold.append(fold3)
 
-    #train_fold = df[df.kfold != fold]
+    train_fold = df[df.kfold != fold]
 
-    valid_fold = df.query(f"kfold == {fold + 3}")
+    valid_fold = df.query(f"kfold == {fold}")
 
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS,
+    worker_init_fn=seed_worker)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS,
+    worker_init_fn=seed_worker)
 
     model_config = RobertaConfig.from_pretrained('roberta-base')
     model_config.output_hidden_states = True
@@ -191,7 +200,7 @@ def run_roberta_training(fold):
 
 
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
@@ -200,7 +209,9 @@ def run_roberta_training(fold):
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
-        print(optimizer.param_groups[0]['lr'])
+        
+
+        print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
 
@@ -219,6 +230,7 @@ def run_roberta_training(fold):
             torch.save(model.state_dict(), f'model_{fold}.bin')
             best_loss = valid_loss
         '''
+        scheduler.step()
 
         early_stopping(valid_loss, model)
         
@@ -350,8 +362,8 @@ if __name__ == "__main__":
     #run_training(0)
     #run_roberta_training(0)
     #run_roberta_training(1)
-    #run_roberta_training(2)
-    run_roberta_sequence_training(3)
+    run_roberta_training(3)
+    #run_roberta_sequence_training(3)
 
 
 
