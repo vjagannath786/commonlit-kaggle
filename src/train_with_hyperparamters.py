@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
+import numpy as np
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
 from transformers import RobertaConfig
@@ -134,27 +135,29 @@ def run_training(fold):
 
 
 def run_roberta_training(fold, params, save_model=True):
-    df = pd.read_csv(config.TRAIN_FILE)
-    #df = df.query(f"kfold != 4")
 
-    fold1 = df.query(f"kfold == {fold}")
-    fold2 = df.query(f"kfold == {fold+1}")
-    fold3 = df.query(f"kfold == {fold+2}")
+    print(f'input {fold}')
+    df = pd.read_csv(config.TRAIN_FILE)
+    df = df.query(f"kfold != 4")
+
+    #fold1 = df.query(f"kfold == {fold}")
+    #fold2 = df.query(f"kfold == {fold+1}")
+    #fold3 = df.query(f"kfold == {fold+2}")
 
     #shuffle data to prevent overfitting
     #df = df.sample(frac=1).reset_index(drop=True)
 
     
 
-    train_fold = fold1.append(fold2)
-    train_fold = train_fold.append(fold3)
+    #train_fold = fold1.append(fold2)
+    #train_fold = train_fold.append(fold3)
 
-    #train_fold = df[df.kfold != fold]
+    train_fold = df[df.kfold != fold]
 
-    valid_fold = df.query(f"kfold == {fold + 3}")
+    valid_fold = df.query(f"kfold == {fold}")
 
-    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=params['MAX_LEN'])
-    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth=params['MAX_LEN'])
+    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=config.MAX_LEN)
+    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth=config.MAX_LEN)
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = params['BATCH_SIZE'], num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
@@ -248,21 +251,25 @@ def run_roberta_training(fold, params, save_model=True):
 def obective(trail):
 
     params = {
-        "LR": trail.suggest_loguniform('LR',1e-6,1e-3),
-        "EPOCHS" : trail.suggest_int('EPOCHS',10,50),
-        "MAX_LEN" :trail.suggest_uniform('MAX_LEN',200,256),
+        "LR": trail.suggest_loguniform('LR',1e-5,5e-5),
+        "EPOCHS" : trail.suggest_int('EPOCHS',10,50),        
         "DROPOUT" : trail.suggest_uniform('DROPOUT',0.1,0.7),
         "BATCH_SIZE" : trail.suggest_int('BATCH_SIZE',8,16)
 
 
     }
+    
+    avg_loss = []
+    for i in range(4):
+        loss = run_roberta_training(i,params, save_model = False)
+        avg_loss.append(loss)
 
-    loss = run_roberta_training(0,params, save_model = False)
+    
     
 
 
 
-    return loss
+    return np.mean(avg_loss)
 
 
 
@@ -282,11 +289,21 @@ if __name__ == "__main__":
     study.optimize(obective, n_trials = 15)
 
     print('best trail')
-    trail_ = study.best_trail
+    trail_ = study.best_trial
     print(trail_.values)
     print(trail_.params)
 
-    run_roberta_training(0, trail_.params, save_model= True)
+    best_params = pd.DataFrame.from_dict(trail_)
+
+    scores = 0
+    for i in range(4):
+        scr = run_roberta_training(i, trail_.params, save_model= True)
+        scores += scr
+    
+
+    print(scores / 4)
+
+    
 
 
     #print(bert_pred)
