@@ -7,6 +7,8 @@ from  dataset import LitDataset
 import numpy as np
 import pandas as pd
 
+from model import LitRobertaSequence
+
 
 
 def loss_fn(outputs, targets):
@@ -113,7 +115,44 @@ class LitRoberta(nn.Module):
             return outputs, loss
 
 
+class LitRobertasequence(nn.Module):
+    def __init__(self,config,dropout):
+        super(LitRobertasequence, self).__init__()
+        self.roberta = transformers.RobertaModel.from_pretrained('roberta-base',  config=config)
+        
+        self.drop1 = nn.Dropout(dropout)
+        self.l1 = nn.Linear(768*1,1)
+        #self.batchnorm1 = nn.BatchNorm1d(128)
+        self.drop2 = nn.Dropout(0.2)
+        self.l2 = nn.Linear(128,64)
+        self.drop3 = nn.Dropout(0.1)
+        self.l3 = nn.Linear(64,1)
 
+        torch.nn.init.normal_(self.l1.weight, std =0.02)
+    
+    def forward(self,ids, mask, targets=None):
+        x = self.roberta(ids, attention_mask = mask)
+        x = x['hidden_states']
+        x = x[-1]
+        
+        x = self.drop1(x)
+        x = torch.mean(x,1, True)
+        #print(x.size())
+        x = self.l1(x)
+        
+        
+        #x = self.drop2(x)
+        #x = self.l2(x)
+        #x = self.drop3(x)
+        #x = self.l3(x)
+        outputs = x.squeeze(-1)
+
+
+        if targets is None:
+            return outputs
+        else:
+            loss = loss_fn(outputs, targets.unsqueeze(1))
+            return outputs, loss
 
 
 
