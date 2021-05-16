@@ -331,7 +331,9 @@ def run_roberta_sequence_training(fold, params, save_model=True):
     #counter = 0 
     for epoch in range(params['EPOCHS']):
         
+
         print(f'epoch {epoch} and LR is {scheduler.get_last_lr()}')
+
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
 
@@ -350,7 +352,7 @@ def run_roberta_sequence_training(fold, params, save_model=True):
             torch.save(model.state_dict(), f'model_{fold}.bin')
             best_loss = valid_loss
         '''
-        #scheduler.step()
+        scheduler.step()
 
         early_stopping(valid_loss, model)
 

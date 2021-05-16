@@ -7,6 +7,7 @@ from transformers import get_linear_schedule_with_warmup
 from transformers import RobertaConfig
 import numpy as np
 import random
+
 from sklearn.metrics import mean_squared_error
 
 torch.manual_seed(0)
@@ -43,8 +44,10 @@ def run_predict_roberta(fold):
     model_config.vocab_size = 50265
     model_config.type_vocab_size = 1
     
+
     model = LitRoberta(config= model_config, dropout =0.1)
     model.load_state_dict(torch.load(f'../../working/checkpoint_roberta_{fold}_v1.pt'))
+
 
     model.to(config.DEVICE)
 
@@ -67,7 +70,8 @@ def run_predict_robertasequence(fold):
 
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets=targets.values,is_test=False)
 
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS,
+    worker_init_fn=seed_worker)
 
     model_config = RobertaConfig.from_pretrained('roberta-base')
     model_config.output_hidden_states = True    
@@ -75,8 +79,9 @@ def run_predict_robertasequence(fold):
     model_config.vocab_size = 50265
     model_config.type_vocab_size = 1
     
+
     model = LitRobertasequence(config= model_config, dropout=0.1)
-    model.load_state_dict(torch.load(f'../../working/checkpoint_roberta_sequence_{fold}.pt'))
+
 
     model.to(config.DEVICE)
 

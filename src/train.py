@@ -11,7 +11,6 @@ from sklearn.ensemble import RandomForestRegressor
 import random
 
 
-
 torch.manual_seed(0)
 
 import config
@@ -166,8 +165,10 @@ def run_roberta_training(fold):
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS,
+    worker_init_fn=seed_worker)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS,
+    worker_init_fn=seed_worker)
 
     model_config = RobertaConfig.from_pretrained('roberta-base')
     model_config.output_hidden_states = True
@@ -201,7 +202,7 @@ def run_roberta_training(fold):
 
 
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
+    scheduler = get_cosine_with_hard_restarts_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
