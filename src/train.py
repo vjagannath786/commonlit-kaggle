@@ -3,19 +3,28 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
+import numpy as np
 from transformers import AdamW
 from transformers import get_linear_schedule_with_warmup
 from transformers import RobertaConfig
 from sklearn.ensemble import RandomForestRegressor
+import random
 
 
 
+torch.manual_seed(0)
 
 import config
 import engine
 from dataset import LitDataset, RobertaLitDataset
 from model import LitModel, LitRoberta, LitRobertasequence
 from pytorrchtools import EarlyStopping
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 
@@ -93,10 +102,11 @@ def run_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_{fold}.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=3, path=f'../../working/checkpoint_{fold}.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
+        print(f'epoch {epoch} and lr is {scheduler.get_last_lr()}')
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
 
@@ -135,23 +145,23 @@ def run_training(fold):
 
 def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
-    #df = df.query(f"kfold != 4")
+    df = df.query(f"kfold != 4")
 
-    fold1 = df.query(f"kfold == {fold}")
-    fold2 = df.query(f"kfold == {fold+1}")
-    fold3 = df.query(f"kfold == {fold+2}")
+    #fold1 = df.query(f"kfold == {fold}")
+    #fold2 = df.query(f"kfold == {fold+1}")
+    #fold3 = df.query(f"kfold == {fold+2}")
 
     #shuffle data to prevent overfitting
     #df = df.sample(frac=1).reset_index(drop=True)
 
     
 
-    train_fold = fold1.append(fold2)
-    train_fold = train_fold.append(fold3)
+    #train_fold = fold1.append(fold2)
+    #train_fold = train_fold.append(fold3)
 
-    #train_fold = df[df.kfold != fold]
+    train_fold = df[df.kfold != fold]
 
-    valid_fold = df.query(f"kfold == {fold + 3}")
+    valid_fold = df.query(f"kfold == {fold}")
 
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
@@ -165,7 +175,7 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config)
+    model = LitRoberta(config= model_config, dropout=0.1)
     model.to(config.DEVICE)
 
     parameter_optimizer = list(model.named_parameters())
@@ -176,7 +186,7 @@ def run_roberta_training(fold):
             "params": [
                 p for n, p in parameter_optimizer if not any(nd in n for nd in no_decay)
             ],
-            "weight_decay": 0.001,
+            "weight_decay": 0.00001,
         },
         {
             "params": [
@@ -196,11 +206,13 @@ def run_roberta_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=3, path=f'../../working/checkpoint_roberta_{fold}_v1.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
-        print(optimizer.param_groups[0]['lr'])
+        
+
+        print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
 
@@ -219,6 +231,7 @@ def run_roberta_training(fold):
             torch.save(model.state_dict(), f'model_{fold}.bin')
             best_loss = valid_loss
         '''
+        scheduler.step()
 
         early_stopping(valid_loss, model)
         
@@ -257,8 +270,8 @@ def run_roberta_sequence_training(fold):
 
     valid_fold = df.query(f"kfold == {fold}")
 
-    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False)
-    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False)
+    trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False,max_lnth=config.MAX_LEN)
+    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth=config.MAX_LEN)
 
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
@@ -270,7 +283,7 @@ def run_roberta_sequence_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRobertasequence(config= model_config)
+    model = LitRobertasequence(config= model_config, dropout=0.1)
     model.to(config.DEVICE)
 
     parameter_optimizer = list(model.named_parameters())
@@ -301,11 +314,11 @@ def run_roberta_sequence_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_roberta_{fold}.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=3, path=f'../../working/checkpoint_roberta_sequence_{fold}.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
-        print(optimizer.param_groups[0]['lr'])
+        print(f'epoch {epoch} and lr is {scheduler.get_last_lr()}')
         train_loss = engine.train_fn(model, trainloader, optimizer, scheduler)
         valid_preds, valid_loss = engine.eval_fn(model, validloader)
 
@@ -347,11 +360,11 @@ def run_roberta_sequence_training(fold):
 
 
 if __name__ == "__main__":
-    #run_training(0)
+    #run_training(3)
     #run_roberta_training(0)
     #run_roberta_training(1)
-    #run_roberta_training(2)
-    run_roberta_sequence_training(3)
+    run_roberta_training(3)
+    #run_roberta_sequence_training(3)
 
 
 
