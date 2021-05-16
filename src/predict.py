@@ -33,10 +33,9 @@ def run_predict_roberta(fold):
 
     targets = valid_fold['target']
 
-    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets=targets.values,is_test=False)
+    validset = RobertaLitDataset(valid_fold['excerpt'].values, targets=targets.values,is_test=False, max_lnth= config.MAX_LEN)
 
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS,
-    worker_init_fn=seed_worker)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
     model_config = RobertaConfig.from_pretrained('roberta-base')
     model_config.output_hidden_states = True
