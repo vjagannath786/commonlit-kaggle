@@ -9,6 +9,7 @@ from transformers import (get_linear_schedule_with_warmup,get_constant_schedule_
 from transformers import RobertaConfig
 from sklearn.ensemble import RandomForestRegressor
 import random
+from sklearn.metrics import mean_squared_error
 
 
 torch.manual_seed(0)
@@ -27,13 +28,15 @@ def seed_worker(worker_id):
 
 
 
-def loss_fn(outputs, targets):
+def _loss_fn(targets, outputs):
     #print(outputs.shape)
     #print(targets.unsqueeze(1).shape)
     
     #loss = 
     #print(loss.view(-1))
-    return torch.sqrt(nn.MSELoss()(outputs, targets))
+    #print((outputs))
+    #print((targets))
+    return mean_squared_error(targets, outputs, squared=False)
 
 
 bert_pred = None
@@ -50,7 +53,7 @@ def load_classifier(bert_outputs, roberta_outputs,valid_targtes):
 
 def run_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
-    df = df.query(f"kfold != 4")
+    #df = df.query(f"kfold != 4")
     '''
 
     fold1 = df.query(f"kfold == {fold}")
@@ -144,7 +147,7 @@ def run_training(fold):
 
 def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
-    df = df.query(f"kfold != 4")
+    #df = df.query(f"kfold != 4")
 
     #fold1 = df.query(f"kfold == {fold}")
     #fold2 = df.query(f"kfold == {fold+1}")
@@ -245,14 +248,16 @@ def run_roberta_training(fold):
 
         #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
 
-        #return valid_preds
+
+
+    return roberta_pred
 
 
 
 
 def run_roberta_sequence_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
-    df = df.query(f"kfold != 4")
+    #df = df.query(f"kfold != 4")
 
     #fold1 = df.query(f"kfold == {fold}")
     #fold2 = df.query(f"kfold == {fold+1}")
@@ -361,10 +366,41 @@ def run_roberta_sequence_training(fold):
 
 if __name__ == "__main__":
     #run_training(3)
-    #run_roberta_training(0)
-    #run_roberta_training(1)
-    run_roberta_training(3)
-    #run_roberta_sequence_training(3)
+    
+    _outputs = []
+    _targets = []
+    
+
+    for i in range(5):
+        df = pd.read_csv(config.TRAIN_FILE)
+        tmp_target = df.query(f"kfold == {i}")['target'].values
+        tmp = run_roberta_training(i)
+
+        a = np.concatenate(tmp,axis=0)
+        b = np.concatenate(a, axis=0)
+
+        #print(len(b))
+        #print(len(tmp_target))
+
+        loss =  _loss_fn(tmp_target, b)
+
+        print(f'loss for fold {i} is {loss}')
+
+        #print(b)
+        #print(tmp_target)
+        _outputs.append(b)
+        _targets.append(tmp_target)
+
+    
+
+    c = np.concatenate(_outputs, axis=0)
+    d = np.concatenate(_targets,axis=0)
+    total_loss =  _loss_fn(d,c)
+
+    print(f'total loss for for all folds is {total_loss}')
+
+    
+
 
 
 
