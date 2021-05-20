@@ -199,8 +199,8 @@ def run_roberta_training(fold):
         },
     ]
 
-    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * config.EPOCHS)
-    #num_train_steps = 3
+    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * 14.5)
+    print(num_train_steps)
 
 
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
