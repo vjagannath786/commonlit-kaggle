@@ -199,7 +199,7 @@ def run_roberta_training(fold):
         },
     ]
 
-    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * 14.5)
+    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * 15)
     print(num_train_steps)
 
 
@@ -309,7 +309,7 @@ def run_roberta_sequence_training(fold):
         },
     ]
 
-    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * config.EPOCHS)
+    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * 15)
     #num_train_steps = 3
 
 
@@ -319,7 +319,7 @@ def run_roberta_sequence_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=3, path=f'../../working/checkpoint_roberta_sequence_{fold}.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=4, path=f'../../working/checkpoint_roberta_sequence_{fold}.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
@@ -355,7 +355,7 @@ def run_roberta_sequence_training(fold):
 
         #model.load_state_dict(torch.load(f'checkpoint_{fold}.pt'))
 
-        #return valid_preds    
+    return valid_preds    
 
 
 
@@ -374,7 +374,7 @@ if __name__ == "__main__":
     for i in range(5):
         df = pd.read_csv(config.TRAIN_FILE)
         tmp_target = df.query(f"kfold == {i}")['target'].values
-        tmp = run_roberta_training(i)
+        tmp = run_roberta_sequence_training(i)
 
         a = np.concatenate(tmp,axis=0)
         b = np.concatenate(a, axis=0)
