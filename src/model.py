@@ -95,11 +95,24 @@ class LitRoberta(nn.Module):
         x = x['hidden_states']
         x = x[-1]
         
+        
         x = self.drop1(x)
+        x = F.relu(x)
         x = torch.mean(x,1, True)
-        #print(x.size())
         x = self.l1(x)
         
+        '''
+        x = self.drop2(x)
+        x = F.relu(x)
+        x = torch.mean(x,1, True)
+        x = self.l2(x)
+   
+        
+        x = self.drop3(x)
+        x = F.relu(x)
+        x = torch.mean(x,1, True)
+        x = self.l3(x)
+        '''
         
         #x = self.drop2(x)
         #x = self.l2(x)

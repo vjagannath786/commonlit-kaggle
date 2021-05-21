@@ -178,9 +178,19 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.1)
+    model = LitRoberta(config= model_config, dropout=0.15)
     model.to(config.DEVICE)
 
+    
+    for param in list(model.named_parameters()):
+        name, _weights = param
+        #print(name)        
+        if 'pooler.dense.weight' in name:
+            print('dense layer weight set to false')
+            _weights.requires_grad = False
+
+
+    
     parameter_optimizer = list(model.named_parameters())
     no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
 
@@ -189,7 +199,7 @@ def run_roberta_training(fold):
             "params": [
                 p for n, p in parameter_optimizer if not any(nd in n for nd in no_decay)
             ],
-            "weight_decay": 0.001,
+            "weight_decay": 1e-3,
         },
         {
             "params": [
@@ -198,18 +208,18 @@ def run_roberta_training(fold):
             "weight_decay": 0.0,
         },
     ]
-
-    num_train_steps = int(len(train_fold) / config.TRAIN_BATCH_SIZE * 15)
-    print(num_train_steps)
-
-
+    
+    
+    
+    
+    num_train_steps = (len(train_fold) // config.TRAIN_BATCH_SIZE * 15)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=5, path=f'../../working/checkpoint_roberta_{fold}_v1.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=4, path=f'../../working/checkpoint_roberta_{fold}_v1.pt',verbose=True)
 
     best_loss = 1000
     for epoch in range(config.EPOCHS):
@@ -374,7 +384,7 @@ if __name__ == "__main__":
     for i in range(5):
         df = pd.read_csv(config.TRAIN_FILE)
         tmp_target = df.query(f"kfold == {i}")['target'].values
-        tmp = run_roberta_sequence_training(i)
+        tmp = run_roberta_training(i)
 
         a = np.concatenate(tmp,axis=0)
         b = np.concatenate(a, axis=0)
