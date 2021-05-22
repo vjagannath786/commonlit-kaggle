@@ -97,7 +97,7 @@ class LitRoberta(nn.Module):
         
         
         x = self.drop1(x)
-        x = F.relu(x)
+        #x = F.relu(x)
         x = torch.mean(x,1, True)
         x = self.l1(x)
         
