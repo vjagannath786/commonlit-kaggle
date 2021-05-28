@@ -228,10 +228,11 @@ def run_roberta_training(fold):
         
 
         print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
-        train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  roberta_pred,early_stopping, global_break)
+        train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  early_stopping,roberta_pred, global_break, fold)
         #valid_preds, valid_loss = engine_early.eval_fn(model, validloader)
 
         if global_break == True:
+            print('in epoch loop')
             break
 
         
