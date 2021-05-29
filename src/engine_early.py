@@ -39,7 +39,7 @@ def train_fn(model, data_loader, optimizer, scheduler, validloader, global_step,
             else:
                 roberta_pred = valid_preds
         
-        if global_break == True:
+        if global_break:
             print('in train loop')
             break
 		

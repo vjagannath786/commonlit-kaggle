@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -42,6 +43,25 @@ def _loss_fn(targets, outputs):
 bert_pred = None
 roberta_pred = None
 
+
+
+def eval_fn(model, data_loader):
+    model.eval()
+    fin_loss = 0
+    fin_preds = []
+    tk0 = tqdm(data_loader, total=len(data_loader))
+    with torch.no_grad():
+        for data in tk0:
+            #a
+            for key, value in data.items():
+                #a
+                data[key] = value.to(config.DEVICE)
+            batch_preds, loss = model(**data)
+            fin_loss += loss.item()
+            fin_preds.append(batch_preds.cpu().detach().numpy())
+
+    
+    return fin_preds, fin_loss / len(data_loader)
 
 def load_classifier(bert_outputs, roberta_outputs,valid_targtes):
     pass
@@ -178,17 +198,17 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.15)
+    model = LitRoberta(config= model_config, dropout=0.1)
     model.to(config.DEVICE)
 
-    
+    '''
     for param in list(model.named_parameters()):
         name, _weights = param
         #print(name)        
         if 'pooler.dense.weight' in name:
             print('dense layer weight set to false')
             _weights.requires_grad = False
-
+    '''
 
     
     parameter_optimizer = list(model.named_parameters())
@@ -215,6 +235,7 @@ def run_roberta_training(fold):
     num_train_steps = (len(train_fold) // config.TRAIN_BATCH_SIZE * 16)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
+    #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
@@ -228,12 +249,63 @@ def run_roberta_training(fold):
         
 
         print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
-        train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  early_stopping,roberta_pred, global_break, fold)
+        #train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  early_stopping,roberta_pred, global_break, fold)
         #valid_preds, valid_loss = engine_early.eval_fn(model, validloader)
 
-        if global_break == True:
-            print('in epoch loop')
+        model.train()
+        fin_loss = 0
+        tk0 = tqdm(trainloader, total=len(trainloader))
+
+        for i,data in enumerate(tk0):
+
+            i=i+1
+
+            for key, value in data.items():
+
+                data[key] = value.to(config.DEVICE)
+        
+        
+            optimizer.zero_grad()
+            _, loss = model(**data)       
+        
+        
+            loss.backward()
+            optimizer.step()
+
+            if i % global_step == 0:
+                valid_preds, valid_loss = eval_fn(model, validloader)
+                print(valid_loss)
+                early_stopping(valid_loss, model)
+            
+                if early_stopping.early_stop:
+
+                    print("Early stopping")
+                    global_break = True
+                    print(global_break)
+                    break
+                else:
+                    roberta_pred = valid_preds
+            
+            scheduler.step()
+            fin_loss += loss.item()
+            if i % global_step == 0:
+                train_loss = fin_loss / i
+                print(f'train_loss {train_loss} and valid_loss {valid_loss}')
+        
+
+        
+        
+        
+        
+        
+        if global_break:
+            print('breaking from epoch')
             break
+
+        
+        
+
+
 
         
 
@@ -385,7 +457,7 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(1):
+    for i in range(5):
         df = pd.read_csv(config.TRAIN_FILE)
         tmp_target = df.query(f"kfold == {i}")['target'].values
         tmp = run_roberta_training(i)
