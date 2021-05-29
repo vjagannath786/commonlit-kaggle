@@ -12,8 +12,10 @@ from sklearn.ensemble import RandomForestRegressor
 import random
 from sklearn.metrics import mean_squared_error
 
-
-torch.manual_seed(0)
+random.seed(1234)
+torch.manual_seed(1234)
+torch.cuda.manual_seed(1234)
+torch.cuda.manual_seed_all(1234)
 
 import config
 import engine_early
@@ -198,7 +200,7 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.1)
+    model = LitRoberta(config= model_config, dropout=0.15)
     model.to(config.DEVICE)
 
     '''
@@ -232,7 +234,7 @@ def run_roberta_training(fold):
     
     
     
-    num_train_steps = (len(train_fold) // config.TRAIN_BATCH_SIZE * 16)
+    num_train_steps = (len(train_fold) // config.TRAIN_BATCH_SIZE * 13)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
     #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
@@ -283,8 +285,11 @@ def run_roberta_training(fold):
                     global_break = True
                     print(global_break)
                     break
-                else:
+                
+                if valid_loss < best_loss:
+                    print(f'------------------ best loss is {valid_loss}----------')
                     roberta_pred = valid_preds
+                    best_loss= valid_loss
             
             scheduler.step()
             fin_loss += loss.item()
@@ -457,7 +462,7 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(5):
+    for i in range(1):
         df = pd.read_csv(config.TRAIN_FILE)
         tmp_target = df.query(f"kfold == {i}")['target'].values
         tmp = run_roberta_training(i)

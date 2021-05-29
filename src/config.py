@@ -2,11 +2,11 @@ import transformers
 
 DEVICE ="cuda"
 TRAIN_BATCH_SIZE = 24
-VALID_BATCH_SIZE = 18
+VALID_BATCH_SIZE = 24
 NUM_WORKERS = 8
 
 EPOCHS = 12
-MAX_LEN = 256
+MAX_LEN = 250
 LR =1e-5
 
 BERT_MODEL = 'bert-base-uncased'
