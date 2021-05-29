@@ -200,7 +200,7 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.15)
+    model = LitRoberta(config= model_config, dropout=0.1)
     model.to(config.DEVICE)
 
     '''
