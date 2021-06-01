@@ -6,7 +6,7 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 from transformers import AdamW
-from transformers import (get_linear_schedule_with_warmup,get_constant_schedule_with_warmup)
+from transformers import (get_linear_schedule_with_warmup,get_cosine_schedule_with_warmup)
 from transformers import RobertaConfig
 from sklearn.ensemble import RandomForestRegressor
 import random
@@ -200,7 +200,7 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.1)
+    model = LitRoberta(config= model_config, dropout=0.2)
     model.to(config.DEVICE)
 
     '''
