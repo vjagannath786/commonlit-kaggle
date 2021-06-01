@@ -65,19 +65,23 @@ class RobertaLitDataset:
         
 
         inputs = self.tokenizer.encode_plus(review, None, truncation=True, add_special_tokens= True, max_length = config.MAX_LEN, 
-        padding = 'max_length')
+         return_token_type_ids= True)
 
-        
+        padding_length = config.MAX_LEN - len(inputs['input_ids'])
 
-        ids = torch.tensor(inputs['input_ids'], dtype=torch.long)
-        mask = torch.tensor(inputs['attention_mask'], dtype=torch.long)
-        #token_type_ids = torch.tensor(inputs['token_type_ids'], dtype=torch.long)
+        ids = torch.tensor(inputs['input_ids'] + ([self.tokenizer.pad_token_id] * padding_length), dtype=torch.long)
+        mask = torch.tensor(inputs['attention_mask'] + \
+        ([0] * padding_length), dtype=torch.long)
+        token_type_ids = torch.tensor(inputs['token_type_ids']+ \
+        ([0] * padding_length), dtype=torch.long)
+
+
 
         if self.is_test:
             return {
                 "ids": ids,
                 "mask": mask,
-                #"token_type_ids": token_type_ids
+                "token_type_ids": token_type_ids
 
             }
         else:
@@ -86,7 +90,7 @@ class RobertaLitDataset:
                 
                 "ids": ids,
                 "mask": mask,
-                #"token_type_ids": token_type_ids,
+                "token_type_ids": token_type_ids,
                 "targets" : targets
                 
             }

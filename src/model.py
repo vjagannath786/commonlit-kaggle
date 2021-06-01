@@ -78,20 +78,20 @@ class LitModel(nn.Module):
 class LitRoberta(nn.Module):
     def __init__(self,config, dropout):
         super(LitRoberta, self).__init__()
-        self.roberta = AutoModel.from_pretrained('roberta-base',  config=config)
+        self.roberta = AutoModel.from_pretrained('../../input/robertaitpt/',  config=config)
         
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
-        self.l1 = nn.Linear(768,1)
+        self.l1 = nn.Linear(768*3,1)
         #self.batchnorm1 = nn.BatchNorm1d(128)
         self.drop2 = nn.Dropout(0.2)
         self.l2 = nn.Linear(128,64)
         self.drop3 = nn.Dropout(0.1)
         self.l3 = nn.Linear(64,1)
 
-        #torch.nn.init.normal_(self.l1.weight, std =0.02)
-        self._init_weights(self.layer_norm)
-        self._init_weights(self.l1)
+        torch.nn.init.normal_(self.l1.weight, std =0.02)
+        #self._init_weights(self.layer_norm)
+        #self._init_weights(self.l1)
 
 
     def _init_weights(self, module):
@@ -108,36 +108,21 @@ class LitRoberta(nn.Module):
             module.weight.data.fill_(1.0)
 
     
-    def forward(self,ids, mask, targets=None):
-        x = self.roberta(ids, attention_mask = mask)
-        #x = x['hidden_states']
-        #x = x[-1]
-        x = x[1]
+    def forward(self,ids, mask, token_type_ids,targets=None):
+        x = self.roberta(ids, attention_mask = mask, token_type_ids= token_type_ids)
+        x = x['hidden_states']
+        x = torch.cat((x[-1], x[-2], x[-3]), dim=-1)
+        #x = x[1]
         
-        x = self.layer_norm(x)
-        x = self.drop1(x)        
+        #x = self.layer_norm(x)
+        x = torch.mean(x,1, True)
+        x = self.drop1(x)       
         
-        #x = torch.mean(x,1, True)
+        
         x = self.l1(x)
         
-        '''
-        x = self.drop2(x)
-        x = F.relu(x)
-        x = torch.mean(x,1, True)
-        x = self.l2(x)
-   
         
-        x = self.drop3(x)
-        x = F.relu(x)
-        x = torch.mean(x,1, True)
-        x = self.l3(x)
-        '''
-        
-        #x = self.drop2(x)
-        #x = self.l2(x)
-        #x = self.drop3(x)
-        #x = self.l3(x)
-        outputs = x
+        outputs = x.squeeze(-1)
 
 
         if targets is None:
@@ -195,8 +180,8 @@ class LitRNNRoberta(nn.Module):
 
         self.rnn = nn.GRU(768,
                           256,
-                          num_layers = 2,
-                          bidirectional = True,
+                          num_layers = n_layers,
+                          bidirectional = bidirectional,
                           batch_first = True,
                           dropout = 0 if n_layers < 2 else dropout)
         
