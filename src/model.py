@@ -78,20 +78,20 @@ class LitModel(nn.Module):
 class LitRoberta(nn.Module):
     def __init__(self,config, dropout):
         super(LitRoberta, self).__init__()
-        self.roberta = AutoModel.from_pretrained('../../input/robertaitpt/',  config=config)
+        self.roberta = AutoModel.from_pretrained('../../input/pretraining-commonlit/',  config=config)
         
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
-        self.l1 = nn.Linear(768*3,1)
+        self.l1 = nn.Linear(768,1)
         #self.batchnorm1 = nn.BatchNorm1d(128)
         self.drop2 = nn.Dropout(0.2)
         self.l2 = nn.Linear(128,64)
         self.drop3 = nn.Dropout(0.1)
         self.l3 = nn.Linear(64,1)
 
-        torch.nn.init.normal_(self.l1.weight, std =0.02)
-        #self._init_weights(self.layer_norm)
-        #self._init_weights(self.l1)
+        #torch.nn.init.normal_(self.l1.weight, std =0.02)
+        self._init_weights(self.layer_norm)
+        self._init_weights(self.l1)
 
 
     def _init_weights(self, module):
@@ -109,25 +109,31 @@ class LitRoberta(nn.Module):
 
     
     def forward(self,ids, mask, token_type_ids,targets=None):
-        x = self.roberta(ids, attention_mask = mask, token_type_ids= token_type_ids)
-        x = x['hidden_states']
-        x = torch.cat((x[-1], x[-2], x[-3]), dim=-1)
-        #x = x[1]
+        _out = self.roberta(ids, attention_mask = mask, token_type_ids= token_type_ids)
+        #x = x['hidden_states']
+        #x = torch.cat((x[-1], x[-2], x[-3]), dim=-1)
+        x = _out[1]
         
-        #x = self.layer_norm(x)
-        x = torch.mean(x,1, True)
+        x = self.layer_norm(x)
+        #x = torch.mean(x,1, True)
         x = self.drop1(x)       
         
         
         x = self.l1(x)
+        #print(x.size())
+
+
+        outputs =x
+
         
         
-        outputs = x.squeeze(-1)
 
 
         if targets is None:
+            
             return outputs
         else:
+            
             loss = loss_fn(outputs, targets.unsqueeze(1))
             return outputs, loss
 

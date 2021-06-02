@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from transformers import AdamW
 from transformers import (get_linear_schedule_with_warmup,get_cosine_schedule_with_warmup)
-from transformers import RobertaConfig
+from transformers import AutoConfig
 from sklearn.ensemble import RandomForestRegressor
 import random
 from sklearn.metrics import mean_squared_error
@@ -87,10 +87,14 @@ def eval_fn(model, data_loader):
                 #a
                 data[key] = value.to(config.DEVICE)
             batch_preds, loss = model(**data)
-            fin_loss += loss.item()
+            #print(batch_preds)
+            #batch_preds = tuple(pred.cpu().detach().numpy() for pred in batch_preds)
             fin_preds.append(batch_preds.cpu().detach().numpy())
+            fin_loss += loss.item()
+            
 
-    
+    #print(f'------------{len(fin_preds)}-----------')
+    #print(fin_preds)
     return fin_preds, fin_loss / len(data_loader)
 
 def load_classifier(bert_outputs, roberta_outputs,valid_targtes):
@@ -197,6 +201,7 @@ def run_training(fold):
 
 def run_roberta_training(fold):
     df = pd.read_csv(config.TRAIN_FILE)
+    
     #df = df.query(f"kfold != 4")
 
     #fold1 = df.query(f"kfold == {fold}")
@@ -218,14 +223,14 @@ def run_roberta_training(fold):
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=config.MAX_LEN)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth = config.MAX_LEN)
 
-    trainsampler = RandomSampler(trainset)
-    validsampler = SequentialSampler(validset)
+    #trainsampler = RandomSampler(trainset)
+    #validsampler = SequentialSampler(validset)
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, sampler=trainsampler,num_workers = config.NUM_WORKERS)
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, sampler=validsampler,num_workers = config.NUM_WORKERS)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
-    model_config = RobertaConfig.from_pretrained('../../input/robertaitpt/')
-    model_config.output_hidden_states = True
+    model_config = AutoConfig.from_pretrained('/kaggle/input/pretraining-commonlit')
+    model_config.output_hidden_states = False
     #model_config.return_dict = False
     #model_config.max_position_embeddings=514
     #model_config.vocab_size = 50265
@@ -262,7 +267,7 @@ def run_roberta_training(fold):
         },
     ]
     
-    
+    opt_param = get_optimizer_params(model)
     
     
     num_train_steps = (len(train_fold) //config.TRAIN_BATCH_SIZE * 13)
@@ -274,7 +279,7 @@ def run_roberta_training(fold):
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau()
 
-    early_stopping = EarlyStopping(patience=4, path=f'../../working/checkpoint_roberta_large_{fold}_v1.pt',verbose=True)
+    early_stopping = EarlyStopping(patience=4, path=f'../../working/checkpoint_roberta_{fold}_v1.pt',verbose=True)
 
     best_loss = 1000
     global_step = 10
@@ -291,6 +296,7 @@ def run_roberta_training(fold):
         tk0 = tqdm(trainloader, total=len(trainloader))
 
         for i,data in enumerate(tk0):
+            
             
             
 
@@ -496,10 +502,21 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(1):
+    for i in range(5):
         df = pd.read_csv(config.TRAIN_FILE)
-        tmp_target = df.query(f"kfold == {4}")['target'].values
-        tmp = run_roberta_training(4)
+        
+        tmp_target = df.query(f"kfold == {i}")['target'].values
+        tmp = run_roberta_training(i)
+
+        #print(tmp)
+
+        #tmp = np.ravel(tmp)
+        #tmp1 = np.ravel(tmp)
+
+        #print(tmp1)
+        
+
+        
 
         a = np.concatenate(tmp,axis=0)
         b = np.concatenate(a, axis=0)
