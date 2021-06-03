@@ -236,7 +236,7 @@ def run_roberta_training(fold):
     #model_config.vocab_size = 50265
     #model_config.type_vocab_size = 1
     
-    model = LitRoberta(config= model_config, dropout=0.2)
+    model = LitRoberta(config= model_config, dropout=0.3)
     model.to(config.DEVICE)
 
     '''
@@ -274,7 +274,7 @@ def run_roberta_training(fold):
     print(num_train_steps)
     optimizer = AdamW(optimizer_parameters, lr=config.LR)
     #optimizer = AdamWeightDecay(learning_rate=config.LR)
-    #scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
     #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
@@ -290,7 +290,7 @@ def run_roberta_training(fold):
     for epoch in range(config.EPOCHS):
         
 
-        print('Epoch:', epoch)
+        print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
         #train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  early_stopping,roberta_pred, global_break, fold)
         #valid_preds, valid_loss = engine_early.eval_fn(model, validloader)
 
@@ -339,7 +339,7 @@ def run_roberta_training(fold):
                     roberta_pred = valid_preds
                     best_loss= valid_loss
             
-            #scheduler.step()
+            scheduler.step()
             fin_loss += loss.item()
             if i % (_lower if i > 90 else _higher) == 0:
                 train_loss = fin_loss / i
@@ -511,11 +511,11 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(5):
+    for i in range(1):
         df = pd.read_csv(config.TRAIN_FILE)
         
-        tmp_target = df.query(f"kfold == {i}")['target'].values
-        tmp = run_roberta_training(i)
+        tmp_target = df.query(f"kfold == {0}")['target'].values
+        tmp = run_roberta_training(0)
 
         #print(tmp)
 

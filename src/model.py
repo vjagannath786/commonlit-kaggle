@@ -82,7 +82,7 @@ class LitRoberta(nn.Module):
         
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
-        self.l1 = nn.Linear(768*1,1)
+        self.l1 = nn.Linear(768*2,1)
         #self.batchnorm1 = nn.BatchNorm1d(128)
         self.drop2 = nn.Dropout(0.2)
         self.l2 = nn.Linear(128,64)
@@ -118,12 +118,12 @@ class LitRoberta(nn.Module):
     def forward(self,ids, mask, token_type_ids,targets=None):
         _out = self.roberta(ids, attention_mask = mask, token_type_ids= token_type_ids)
         x = _out['hidden_states']
-        #x = torch.cat((x[-1], x[-2], x[-3]), dim=-1)
-        x = x[-1]
+        x = torch.cat((x[-1], x[-2]), dim=-1)
+        #x = x[-1]
         
         #x = self.layer_norm(x)
-        x = torch.mean(x,1, True)
         
+        x = torch.mean(x,1, True)
         x = self.drop1(x)       
         
         

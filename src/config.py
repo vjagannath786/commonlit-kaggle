@@ -3,7 +3,7 @@ from transformers import AutoTokenizer
 
 DEVICE ="cuda"
 TRAIN_BATCH_SIZE = 24
-VALID_BATCH_SIZE = 24
+VALID_BATCH_SIZE = 18
 NUM_WORKERS = 4
 
 EPOCHS = 10
