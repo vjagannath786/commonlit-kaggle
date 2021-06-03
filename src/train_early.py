@@ -223,14 +223,14 @@ def run_roberta_training(fold):
     trainset = RobertaLitDataset(train_fold['excerpt'].values, targets= train_fold['target'].values, is_test=False, max_lnth=config.MAX_LEN)
     validset = RobertaLitDataset(valid_fold['excerpt'].values, targets= valid_fold['target'].values, is_test=False, max_lnth = config.MAX_LEN)
 
-    #trainsampler = RandomSampler(trainset)
-    #validsampler = SequentialSampler(validset)
+    trainsampler = RandomSampler(trainset)
+    validsampler = SequentialSampler(validset)
 
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
-    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, sampler=trainsampler,num_workers = config.NUM_WORKERS)
+    validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, sampler=validsampler,num_workers = config.NUM_WORKERS)
 
     model_config = AutoConfig.from_pretrained('/kaggle/input/robertaitpt')
-    model_config.output_hidden_states = False
+    model_config.output_hidden_states = True
     #model_config.return_dict = False
     #model_config.max_position_embeddings=514
     #model_config.vocab_size = 50265
@@ -250,7 +250,7 @@ def run_roberta_training(fold):
 
     
     parameter_optimizer = list(model.named_parameters())
-    no_decay = ["bias"]
+    no_decay = ["bias","LayerNorm.weight","LayerNorm.bias"]
 
     optimizer_parameters = [
         {
@@ -272,7 +272,7 @@ def run_roberta_training(fold):
     
     num_train_steps = (len(train_fold) //config.TRAIN_BATCH_SIZE * 13)
     print(num_train_steps)
-    optimizer = AdamW(model.parameters(), lr=config.LR)
+    optimizer = AdamW(optimizer_parameters, lr=config.LR)
     #optimizer = AdamWeightDecay(learning_rate=config.LR)
     #scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
     #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
@@ -284,8 +284,8 @@ def run_roberta_training(fold):
 
     best_loss = 1000
     #global_step = 10
-    _higher = 10
-    _lower = 10
+    _higher = 20
+    _lower = 20
     global_break = False
     for epoch in range(config.EPOCHS):
         
@@ -511,7 +511,7 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(1):
+    for i in range(5):
         df = pd.read_csv(config.TRAIN_FILE)
         
         tmp_target = df.query(f"kfold == {i}")['target'].values
