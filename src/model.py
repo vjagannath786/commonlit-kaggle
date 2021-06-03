@@ -19,7 +19,7 @@ def loss_fn(outputs, targets):
     #print(loss.view(-1))
     return torch.sqrt(nn.MSELoss()(outputs, targets))
 
-
+_layers = ['layer.11']
 
 
 class LitModel(nn.Module):
@@ -78,7 +78,7 @@ class LitModel(nn.Module):
 class LitRoberta(nn.Module):
     def __init__(self,config, dropout):
         super(LitRoberta, self).__init__()
-        self.roberta = AutoModel.from_pretrained('../../input/pretraining-commonlit/',  config=config)
+        self.roberta = AutoModel.from_pretrained('../../input/robertaitpt/',  config=config)
         
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
@@ -90,9 +90,16 @@ class LitRoberta(nn.Module):
         self.l3 = nn.Linear(64,1)
 
         #torch.nn.init.normal_(self.l1.weight, std =0.02)
-        self._init_weights(self.layer_norm)
+        #self._init_weights(self.layer_norm)
         self._init_weights(self.l1)
+        
+        for params in self.roberta.named_parameters():
+            name, weights = params
 
+            if any(i in name for i in _layers):
+                #print('layer 11 freezed')
+                weights.requires_grad = False
+        
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
@@ -116,6 +123,7 @@ class LitRoberta(nn.Module):
         
         x = self.layer_norm(x)
         #x = torch.mean(x,1, True)
+        
         x = self.drop1(x)       
         
         
@@ -195,11 +203,11 @@ class LitRNNRoberta(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
     
-    def forward(self,ids, mask, targets=None):
+    def forward(self,ids, mask, token_type_ids,targets=None):
         #text = [batch size, sent len]
                 
         with torch.no_grad():
-            embedded = self.roberta(ids, attention_mask = mask)[0]
+            embedded = self.roberta(ids, attention_mask = mask, token_type_ids=token_type_ids)[0]
                 
         
         

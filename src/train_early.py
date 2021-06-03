@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pandas as pd
 import numpy as np
-from transformers import AdamW
+from transformers import AdamW,AdamWeightDecay
 from transformers import (get_linear_schedule_with_warmup,get_cosine_schedule_with_warmup)
 from transformers import AutoConfig
 from sklearn.ensemble import RandomForestRegressor
@@ -229,7 +229,7 @@ def run_roberta_training(fold):
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, num_workers = config.NUM_WORKERS)
 
-    model_config = AutoConfig.from_pretrained('/kaggle/input/pretraining-commonlit')
+    model_config = AutoConfig.from_pretrained('/kaggle/input/robertaitpt')
     model_config.output_hidden_states = False
     #model_config.return_dict = False
     #model_config.max_position_embeddings=514
@@ -250,7 +250,7 @@ def run_roberta_training(fold):
 
     
     parameter_optimizer = list(model.named_parameters())
-    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
+    no_decay = ["bias"]
 
     optimizer_parameters = [
         {
@@ -272,8 +272,9 @@ def run_roberta_training(fold):
     
     num_train_steps = (len(train_fold) //config.TRAIN_BATCH_SIZE * 13)
     print(num_train_steps)
-    optimizer = AdamW(optimizer_parameters, lr=config.LR)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
+    optimizer = AdamW(model.parameters(), lr=config.LR)
+    #optimizer = AdamWeightDecay(learning_rate=config.LR)
+    #scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
     #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
 
     #optimizer = torch.optim.Adam(optimizer_parameters, lr=3e-4)
@@ -282,12 +283,14 @@ def run_roberta_training(fold):
     early_stopping = EarlyStopping(patience=4, path=f'../../working/checkpoint_roberta_{fold}_v1.pt',verbose=True)
 
     best_loss = 1000
-    global_step = 10
+    #global_step = 10
+    _higher = 10
+    _lower = 10
     global_break = False
     for epoch in range(config.EPOCHS):
         
 
-        print('Epoch:', epoch,'LR:', scheduler.get_last_lr())
+        print('Epoch:', epoch)
         #train_loss = engine_early.train_fn(model, trainloader, optimizer, scheduler,validloader, global_step,  early_stopping,roberta_pred, global_break, fold)
         #valid_preds, valid_loss = engine_early.eval_fn(model, validloader)
 
@@ -296,6 +299,7 @@ def run_roberta_training(fold):
         tk0 = tqdm(trainloader, total=len(trainloader))
 
         for i,data in enumerate(tk0):
+            
             
             
             
@@ -314,7 +318,11 @@ def run_roberta_training(fold):
             loss.backward()
             optimizer.step()
 
-            if i % global_step == 0:
+            
+            
+            
+            
+            if i % (_lower if i > 90 else _higher) == 0:
                 valid_preds, valid_loss = eval_fn(model, validloader)
                 print(valid_loss)
                 early_stopping(valid_loss, model)
@@ -331,11 +339,12 @@ def run_roberta_training(fold):
                     roberta_pred = valid_preds
                     best_loss= valid_loss
             
-            scheduler.step()
+            #scheduler.step()
             fin_loss += loss.item()
-            if i % global_step == 0:
+            if i % (_lower if i > 90 else _higher) == 0:
                 train_loss = fin_loss / i
                 print(f'train_loss {train_loss} and valid_loss {valid_loss}')
+            
         
 
         
@@ -347,7 +356,7 @@ def run_roberta_training(fold):
             print('breaking from epoch')
             break
 
-        
+        #scheduler.step()
         
 
 
@@ -502,7 +511,7 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(5):
+    for i in range(1):
         df = pd.read_csv(config.TRAIN_FILE)
         
         tmp_target = df.query(f"kfold == {i}")['target'].values
