@@ -229,7 +229,7 @@ def run_roberta_training(fold):
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, sampler=trainsampler,num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, sampler=validsampler,num_workers = config.NUM_WORKERS)
 
-    model_config = AutoConfig.from_pretrained('/kaggle/input/robertaitpt')
+    model_config = AutoConfig.from_pretrained('/kaggle/input/pretrain-with-ten-epochs')
     model_config.output_hidden_states = True
     #model_config.return_dict = False
     #model_config.max_position_embeddings=514
@@ -514,8 +514,8 @@ if __name__ == "__main__":
     for i in range(1):
         df = pd.read_csv(config.TRAIN_FILE)
         
-        tmp_target = df.query(f"kfold == {0}")['target'].values
-        tmp = run_roberta_training(0)
+        tmp_target = df.query(f"kfold == {2}")['target'].values
+        tmp = run_roberta_training(2)
 
         #print(tmp)
 
