@@ -83,6 +83,7 @@ class LitRoberta(nn.Module):
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
         self.l1 = nn.Linear(768*2,1)
+        self.conv1 = nn.Conv1d(768*2,1,1)
         #self.batchnorm1 = nn.BatchNorm1d(128)
         self.drop2 = nn.Dropout(0.2)
         self.l2 = nn.Linear(128,64)
@@ -125,9 +126,9 @@ class LitRoberta(nn.Module):
         
         x = torch.mean(x,1, True)
         x = self.drop1(x)       
-        
-        
-        x = self.l1(x)
+        x = x.permute(0,2,1)
+        x = x.conv1(x)
+        #x = self.l1(x)
         #print(x.size())
 
 
