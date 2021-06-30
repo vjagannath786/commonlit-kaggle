@@ -19,7 +19,7 @@ def loss_fn(outputs, targets):
     #print(loss.view(-1))
     return torch.sqrt(nn.MSELoss()(outputs, targets))
 
-_layers = ['layer.11']
+_layers = ['layer.23','layer.22','layer.21','layer.20','layer.19']
 
 
 class LitModel(nn.Module):
@@ -78,8 +78,12 @@ class LitModel(nn.Module):
 class LitRoberta(nn.Module):
     def __init__(self,config, dropout):
         super(LitRoberta, self).__init__()
-        self.roberta = AutoModel.from_pretrained('../../input/pretrain-with-ten-epochs/',  config=config)
+        self.roberta = AutoModel.from_pretrained('roberta-large',  config=config)
         
+        self.drop1 = nn.Dropout(dropout)
+        self.l1 = nn.Linear(1024*2,1)
+        
+        '''
         self.drop1 = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(768)
         self.l1 = nn.Linear(768*2,1)
@@ -89,21 +93,37 @@ class LitRoberta(nn.Module):
         self.l2 = nn.Linear(128,64)
         self.drop3 = nn.Dropout(0.1)
         self.l3 = nn.Linear(64,1)
-
-        torch.nn.init.normal_(self.l1.weight, std =0.02)
+        '''
+        #torch.nn.init.normal_(self.roberta.layer.11.weight, std =0.02)
+        
         #self._init_weights(self.layer_norm)
-        #self._init_weights(self.l1)
+        #self._init_weights(self.roberta.)
+        #self._init_weights(self.roberta.layer.10)
+        #self._init_weights(self.roberta.layer.9)
+        #self._init_weights(self.roberta.layer.8)
+        #self._init_weights(self.roberta.layer.7)
+        #self.roberta.init_weights()
+
+        self._init_weights(self.l1)
+        self.weights_init_custom()
+        
+        #print(self.roberta.named_parameters())
+        
         '''
         for params in self.roberta.named_parameters():
             name, weights = params
-
+            #print(name)
+        
             if any(i in name for i in _layers):
                 #print('layer 11 freezed')
                 weights.requires_grad = False
         '''
 
+
+
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
+            print('in init')
             module.weight.data.normal_(mean=0.0, std=0.02)
             if module.bias is not None:
                 module.bias.data.zero_()
@@ -115,7 +135,25 @@ class LitRoberta(nn.Module):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
 
-    
+    def weights_init_custom(self):
+        init_layers = [23, 22, 21,20,19]
+        dense_names = ["query", "key", "value", "dense"]
+        layernorm_names = ["LayerNorm"]
+        for name, module in self.roberta.named_parameters():
+            if any(f".{i}." in name for i in init_layers):
+                if any(n in name for n in dense_names):
+                    if "bias" in name:
+                        module.data.zero_()
+                    elif "weight" in name:
+                        print(name)
+                        module.data.normal_(mean=0.0, std=0.02)
+                elif any(n in name for n in layernorm_names):
+                    if "bias" in name:
+                        module.data.zero_()
+                    elif "weight" in name:
+                        module.data.fill_(1.0)
+
+
     def forward(self,ids, mask, token_type_ids,targets=None):
         _out = self.roberta(ids, attention_mask = mask, token_type_ids= token_type_ids)
         x = _out['hidden_states']
@@ -126,9 +164,9 @@ class LitRoberta(nn.Module):
         
         x = torch.mean(x,1, True)
         x = self.drop1(x)       
-        x = x.permute(0,2,1)
-        x = self.conv1(x)
-        #x = self.l1(x)
+        #x = x.permute(0,2,1)
+        #x = self.conv1(x)
+        x = self.l1(x)
         #print(x.size())
 
 
