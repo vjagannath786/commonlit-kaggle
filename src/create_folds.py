@@ -1,10 +1,10 @@
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold
 import pandas as pd
 import os
 import numpy as np
 
 
-path = '..//input//'
+path = '../../input'
 
 def create_folds(data, num_splits):
     
@@ -20,7 +20,7 @@ def create_folds(data, num_splits):
 
     data['bins'] = pd.cut(data['target'], bins=_bins, labels=False)
 
-    skf = StratifiedKFold(n_splits=num_splits)
+    skf = KFold(n_splits=num_splits)
 
     for f, (t_,v_) in enumerate(skf.split(X=data, y=data.bins.values)):
         data.loc[v_,"kfold"] = f
@@ -40,6 +40,6 @@ if __name__ == "__main__":
 
     data = create_folds(df, 5)
 
-    data.to_csv(os.path.join(path,'train_folds.csv'), index=False)
+    data.to_csv(os.path.join(path,'train_kfolds.csv'), index=False)
 
     print(data['kfold'].value_counts())

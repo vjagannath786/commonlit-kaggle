@@ -78,9 +78,10 @@ class LitModel(nn.Module):
 class LitRoberta(nn.Module):
     def __init__(self,config, dropout):
         super(LitRoberta, self).__init__()
-        self.roberta = AutoModel.from_pretrained('roberta-large',  config=config)
+        self.roberta = AutoModel.from_pretrained('../../input/pretraining-large-external',  config=config)
         
         self.drop1 = nn.Dropout(dropout)
+        self.layer_norm = nn.LayerNorm(1024*2)
         self.l1 = nn.Linear(1024*2,1)
         
         '''
@@ -163,6 +164,7 @@ class LitRoberta(nn.Module):
         #x = self.layer_norm(x)
         
         x = torch.mean(x,1, True)
+        x = self.layer_norm(x)
         x = self.drop1(x)       
         #x = x.permute(0,2,1)
         #x = self.conv1(x)

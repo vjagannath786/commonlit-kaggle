@@ -17,10 +17,10 @@ from torch.utils.data import (
     SequentialSampler, RandomSampler
 )
 
-random.seed(1234)
-torch.manual_seed(1234)
-torch.cuda.manual_seed(1234)
-torch.cuda.manual_seed_all(1234)
+random.seed(2021)
+torch.manual_seed(2021)
+torch.cuda.manual_seed(2021)
+torch.cuda.manual_seed_all(2021)
 
 import config
 import engine_early
@@ -73,6 +73,58 @@ def get_optimizer_params(model):
         {'params': [p for n, p in model.named_parameters() if "roberta" not in n], 'lr':2e-5, "momentum" : 0.99},
     ]
     return optimizer_parameters
+
+
+def get_parameters(model, model_init_lr, multiplier, classifier_lr):
+    parameters = []
+    lr = model_init_lr
+    for layer in range(23,-1,-1):
+        layer_params = {
+            'params': [p for n,p in model.named_parameters() if f'encoder.layer.{layer}.' in n],
+            'lr': lr
+        }
+        parameters.append(layer_params)
+        lr *= multiplier
+    classifier_params = {
+        'params': [p for n,p in model.named_parameters() if 'layer_norm' in n or 'linear' in n 
+                   or 'pooling' in n],
+        'lr': classifier_lr
+    }
+    parameters.append(classifier_params)
+    return parameters
+
+
+def create_optimizer(model):
+    named_parameters = list(model.named_parameters())    
+    
+    roberta_parameters = named_parameters[:197]    
+    attention_parameters = named_parameters[199:203]
+    regressor_parameters = named_parameters[203:]
+        
+    attention_group = [params for (name, params) in attention_parameters]
+    regressor_group = [params for (name, params) in regressor_parameters]
+
+    parameters = []
+    parameters.append({"params": attention_group})
+    parameters.append({"params": regressor_group})
+
+    for layer_num, (name, params) in enumerate(roberta_parameters):
+        weight_decay = 0.0 if "bias" in name else 0.01
+
+        lr = 2e-5
+
+        if layer_num >= 69:        
+            lr = 5e-5
+
+        if layer_num >= 133:
+            lr = 1e-4
+
+        parameters.append({"params": params,
+                           "weight_decay": weight_decay,
+                           "lr": lr})
+
+    return AdamW(parameters)
+
 
 
 def eval_fn(model, data_loader):
@@ -229,7 +281,7 @@ def run_roberta_training(fold):
     trainloader = torch.utils.data.DataLoader(trainset, batch_size = config.TRAIN_BATCH_SIZE, sampler=trainsampler,num_workers = config.NUM_WORKERS)
     validloader = torch.utils.data.DataLoader(validset, batch_size = config.VALID_BATCH_SIZE, sampler=validsampler,num_workers = config.NUM_WORKERS)
 
-    model_config = AutoConfig.from_pretrained('roberta-large')
+    model_config = AutoConfig.from_pretrained('../../input/pretraining-large-external')
     model_config.output_hidden_states = True
     #model_config.return_dict = False
     #model_config.max_position_embeddings=514
@@ -267,12 +319,15 @@ def run_roberta_training(fold):
         },
     ]
     
-    opt_param = get_optimizer_params(model)
+    #opt_param = get_optimizer_params(model)
+
+    opt_param = get_parameters(model,2e-5,0.9,2e-5)
     
     
     num_train_steps = (len(train_fold) //config.TRAIN_BATCH_SIZE * 13)
     print(num_train_steps)
-    optimizer = AdamW(optimizer_parameters, lr=config.LR)
+    optimizer = AdamW(opt_param, lr=config.LR)
+    #optimizer = create_optimizer(model)
     #optimizer = AdamWeightDecay(learning_rate=config.LR)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0,num_training_steps=num_train_steps)
     #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=8)
@@ -512,11 +567,11 @@ if __name__ == "__main__":
     _targets = []
     
 
-    for i in range(5):
+    for i in range(1):
         df = pd.read_csv(config.TRAIN_FILE)
         
-        tmp_target = df.query(f"kfold == {i}")['target'].values
-        tmp = run_roberta_training(i)
+        tmp_target = df.query(f"kfold == {4}")['target'].values
+        tmp = run_roberta_training(4)
 
         #print(tmp)
 
